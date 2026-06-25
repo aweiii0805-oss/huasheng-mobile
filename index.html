@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#1a1a2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>公考花生十三 - 行测申论助手</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📚</text></svg>">
+<style>
+/* ===== Reset & Base ===== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f0f1a; --bg2:#1a1a2e; --bg3:#252540;
+  --fg:#e8e8f0; --fg2:#b0b0c0; --fg3:#7777a0;
+  --accent:#6c63ff; --accent2:#8b83ff; --accent3:#4a42d0;
+  --success:#34d399; --warn:#fbbf24; --danger:#ef4444;
+  --radius:12px; --radius-sm:8px;
+  --shadow:0 4px 20px rgba(0,0,0,.3);
+  --tab-h:60px; --header-h:52px;
+  --font:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif
+}
+html,body{height:100%;overflow:hidden;font-family:var(--font);background:var(--bg);color:var(--fg);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+a{color:var(--accent2);text-decoration:none}
+/* scrollbar */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--fg3);border-radius:4px}
+
+/* ===== Header ===== */
+.header{
+  position:fixed;top:0;left:0;right:0;height:var(--header-h);z-index:100;
+  background:linear-gradient(135deg,#1a1a2e,#252540);border-bottom:1px solid rgba(108,99,255,.2);
+  display:flex;align-items:center;justify-content:space-between;padding:0 16px;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)
+}
+.header-title{font-size:17px;font-weight:700;background:linear-gradient(135deg,#6c63ff,#34d399);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.header-actions{display:flex;gap:8px}
+.header-btn{
+  background:var(--bg3);border:none;color:var(--fg2);width:34px;height:34px;
+  border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:16px;cursor:pointer;transition:.2s
+}
+.header-btn:active{transform:scale(.92)}
+
+/* ===== Tab Bar ===== */
+.tab-bar{
+  position:fixed;bottom:0;left:0;right:0;height:var(--tab-h);z-index:100;
+  background:linear-gradient(180deg,#1a1a2e,#16162a);border-top:1px solid rgba(108,99,255,.15);
+  display:flex;align-items:center;justify-content:space-around;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  padding-bottom:env(safe-area-inset-bottom,0)
+}
+.tab-btn{
+  background:none;border:none;color:var(--fg3);font-size:11px;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:6px 12px;border-radius:8px;transition:.2s;min-width:48px
+}
+.tab-btn .tab-icon{font-size:20px;transition:.2s}
+.tab-btn.active{color:var(--accent2)}
+.tab-btn.active .tab-icon{transform:scale(1.1)}
+.tab-btn:active{transform:scale(.92)}
+
+/* ===== Main Content Area ===== */
+.main{
+  position:fixed;top:var(--header-h);left:0;right:0;bottom:var(--tab-h);
+  overflow:hidden;padding:0
+}
+.tab-content{display:none;height:100%;overflow-y:auto;padding:12px 16px;padding-bottom:80px}
+.tab-content.active{display:block}
+
+/* ===== Knowledge Base ===== */
+.module-grid{display:flex;flex-direction:column;gap:10px}
+.module-card{
+  background:var(--bg2);border-radius:var(--radius);padding:14px 16px;
+  cursor:pointer;transition:.2s;border:1px solid transparent
+}
+.module-card:active{background:var(--bg3);border-color:var(--accent)}
+.module-card-header{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.module-card-icon{font-size:22px}
+.module-card-title{font-size:15px;font-weight:600}
+.module-card-intro{font-size:12.5px;color:var(--fg2);line-height:1.4}
+.module-card-expand{font-size:12px;color:var(--accent2);text-align:right;margin-top:6px}
+
+/* Section (inside module) */
+.section-box{
+  background:var(--bg3);border-radius:var(--radius-sm);margin-top:8px;overflow:hidden
+}
+.section-header{
+  padding:10px 14px;font-size:13.5px;font-weight:600;cursor:pointer;
+  display:flex;justify-content:space-between;align-items:center;
+  transition:.2s;user-select:none
+}
+.section-header:active{background:rgba(108,99,255,.1)}
+.section-header .arrow{transition:transform .25s;font-size:12px}
+.section-header.open .arrow{transform:rotate(180deg)}
+.section-body{display:none;padding:0 14px 10px;font-size:12.5px;color:var(--fg2);line-height:1.7;white-space:pre-wrap}
+.section-body.open{display:block}
+.section-body .warning{color:var(--warn);font-weight:600}
+
+/* ===== Chat ===== */
+#chat-tab{padding-bottom:100px}
+.chat-messages{display:flex;flex-direction:column;gap:10px;padding-bottom:10px}
+.msg{
+  max-width:88%;padding:10px 14px;border-radius:14px;
+  font-size:14px;line-height:1.65;white-space:pre-wrap;word-break:break-word;
+  animation:fadeIn .25s ease
+}
+.msg.user{
+  align-self:flex-end;background:var(--accent);color:#fff;
+  border-bottom-right-radius:4px
+}
+.msg.ai{
+  align-self:flex-start;background:var(--bg2);color:var(--fg);
+  border-bottom-left-radius:4px
+}
+.msg.system{
+  align-self:center;background:var(--bg3);color:var(--fg2);font-size:12.5px;
+  max-width:92%;text-align:center
+}
+.msg .timestamp{font-size:10px;color:var(--fg3);margin-top:4px;text-align:right;opacity:.6}
+.msg.ai code{background:rgba(108,99,255,.2);padding:1px 5px;border-radius:3px;font-size:13px;font-family:monospace}
+.msg.ai pre{background:var(--bg);padding:8px 10px;border-radius:6px;margin:6px 0;overflow-x:auto;font-size:13px}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.typing-dots{display:inline-flex;gap:3px;padding:4px 0}
+.typing-dots span{width:6px;height:6px;background:var(--fg2);border-radius:50%;animation:dotPulse 1.4s infinite}
+.typing-dots span:nth-child(2){animation-delay:.2s}
+.typing-dots span:nth-child(3){animation-delay:.4s}
+@keyframes dotPulse{0%,60%,100%{opacity:.3;transform:scale(.8)}30%{opacity:1;transform:scale(1.2)}}
+
+/* ===== Chat Input ===== */
+.chat-input-bar{
+  position:fixed;bottom:var(--tab-h);left:0;right:0;z-index:90;
+  background:var(--bg);border-top:1px solid rgba(108,99,255,.12);
+  display:flex;align-items:flex-end;gap:8px;padding:8px 12px;
+  padding-bottom:calc(8px + env(safe-area-inset-bottom,0))
+}
+.chat-input{
+  flex:1;background:var(--bg2);border:1px solid var(--bg3);border-radius:20px;
+  color:var(--fg);font-size:14px;padding:9px 14px;outline:none;resize:none;
+  max-height:100px;font-family:var(--font);transition:border-color .2s
+}
+.chat-input:focus{border-color:var(--accent)}
+.chat-send{
+  width:38px;height:38px;border-radius:50%;background:var(--accent);border:none;
+  color:#fff;font-size:17px;cursor:pointer;display:flex;align-items:center;
+  justify-content:center;transition:.2s;flex-shrink:0
+}
+.chat-send:disabled{opacity:.3;cursor:default}
+
+.chat-camera{
+  width:38px;height:38px;border-radius:50%;background:var(--bg3);border:none;
+  color:var(--fg2);font-size:17px;cursor:pointer;display:flex;align-items:center;
+  justify-content:center;transition:.2s;flex-shrink:0
+}
+.chat-camera:active{transform:scale(.92)}
+.photo-preview{max-width:100px;max-height:80px;border-radius:8px;margin-right:8px;flex-shrink:0}
+#photoPreview{display:none;align-items:center;gap:8px;margin-bottom:8px}
+
+/* ===== API Key Modal ===== */
+.modal-overlay{
+  position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.6);
+  display:none;align-items:center;justify-content:center;padding:20px;
+  backdrop-filter:blur(4px)
+}
+.modal-overlay.open{display:flex}
+.modal-box{
+  background:var(--bg2);border-radius:var(--radius);padding:20px;width:100%;max-width:360px;
+  box-shadow:var(--shadow);border:1px solid var(--bg3)
+}
+.modal-title{font-size:16px;font-weight:600;margin-bottom:4px}
+.modal-desc{font-size:12.5px;color:var(--fg2);margin-bottom:12px;line-height:1.5}
+.modal-input{
+  width:100%;background:var(--bg3);border:1px solid transparent;border-radius:8px;
+  color:var(--fg);font-size:14px;padding:10px 12px;outline:none;margin-bottom:8px;
+  font-family:monospace;transition:border-color .2s
+}
+.modal-input:focus{border-color:var(--accent)}
+.modal-actions{display:flex;gap:8px;margin-top:4px}
+.modal-btn{
+  flex:1;padding:9px;border-radius:8px;border:none;font-size:13px;
+  font-weight:600;cursor:pointer;transition:.2s
+}
+.modal-btn.primary{background:var(--accent);color:#fff}
+.modal-btn.secondary{background:var(--bg3);color:var(--fg2)}
+.modal-btn:active{transform:scale(.96)}
+
+/* ===== Search ===== */
+.search-box{
+  display:flex;gap:8px;margin-bottom:12px
+}
+.search-input{
+  flex:1;background:var(--bg2);border:1px solid var(--bg3);border-radius:20px;
+  color:var(--fg);font-size:13px;padding:8px 14px;outline:none
+}
+.search-input:focus{border-color:var(--accent)}
+.search-btn{
+  background:var(--accent);border:none;color:#fff;padding:8px 14px;
+  border-radius:20px;font-size:13px;cursor:pointer;font-weight:600
+}
+.search-btn:active{opacity:.8}
+
+/* ===== Strategy Tab ===== */
+.strategy-section{
+  background:var(--bg2);border-radius:var(--radius);padding:14px 16px;margin-bottom:10px
+}
+.strategy-section h3{font-size:14px;font-weight:600;margin-bottom:6px}
+.strategy-section p{font-size:12.5px;color:var(--fg2);line-height:1.7;white-space:pre-wrap}
+
+/* ===== Responsive ===== */
+@media(min-width:600px){
+  .main{max-width:480px;margin:0 auto}
+  .chat-input-bar{max-width:480px;left:50%;transform:translateX(-50%)}
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-title">📚 公考花生十三</div>
+  <div class="header-actions">
+    <button class="header-btn" id="settingsBtn" title="设置 API Key">⚙️</button>
+  </div>
+</div>
+
+<!-- Main Content -->
+<div class="main">
+
+  <!-- Tab 1: 知识库 -->
+  <div class="tab-content active" id="tab-knowledge">
+    <div class="search-box">
+      <input class="search-input" id="knowledgeSearch" placeholder="搜索知识库..." type="search">
+      <button class="search-btn" id="searchBtn">搜索</button>
+    </div>
+    <div class="module-grid" id="moduleGrid"></div>
+  </div>
+
+  <!-- Tab 2: 搜题答疑 -->
+  <div class="tab-content" id="tab-chat">
+    <div class="chat-messages" id="chatMessages">
+      <div class="msg system">发送公考题目或提问，AI 会按照花生十三的方法体系为你解答。</div>
+    </div>
+  </div>
+
+  <!-- Tab 3: 备考策略 -->
+  <div class="tab-content" id="tab-strategy">
+    <div id="strategyContent"></div>
+  </div>
+
+</div>
+
+<!-- Chat Input Bar -->
+<div class="chat-input-bar" id="chatInputBar" style="display:none">
+  <textarea class="chat-input" id="chatInput" rows="1" placeholder="输入题目或问题..." style="height:40px"></textarea>
+  <input type="file" id="photoInput" accept="image/*" capture="environment" style="display:none">
+  <label class="chat-camera" for="photoInput" title="拍照搜题">📷</label>
+  <button class="chat-send" id="chatSend" disabled>➤</button>
+</div>
+
+<!-- Tab Bar -->
+<div class="tab-bar">
+  <button class="tab-btn active" data-tab="knowledge">
+    <span class="tab-icon">📖</span>知识库
+  </button>
+  <button class="tab-btn" data-tab="chat">
+    <span class="tab-icon">🤖</span>搜题答疑
+  </button>
+  <button class="tab-btn" data-tab="strategy">
+    <span class="tab-icon">🎯</span>备考策略
+  </button>
+</div>
+
+<!-- API Key Modal -->
+<div class="modal-overlay" id="apiModal">
+  <div class="modal-box">
+    <div class="modal-title">设置 DeepSeek API Key</div>
+    <div class="modal-desc">输入你的 DeepSeek API Key 即可开启 AI 搜题答疑功能。Key 仅保存在本地浏览器中。</div>
+    <input class="modal-input" id="apiKeyInput" type="password" placeholder="sk-...">
+    <div class="modal-actions">
+      <button class="modal-btn secondary" id="modalCancel">取消</button>
+      <button class="modal-btn primary" id="modalSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<script src="knowledge-data.js"></script>
+<script>
+'use strict';
+
+/* ============================================================
+   状态管理
+============================================================ */
+const STATE = {
+  currentTab: 'knowledge',
+  apiKey: localStorage.getItem('huasheng_api_key') || '',
+  messages: JSON.parse(localStorage.getItem('huasheng_chat') || '[]'),
+  isProcessing: false,
+  expandedModules: {}
+};
+
+/* ============================================================
+   DOM 引用
+============================================================ */
+const $ = id => document.getElementById(id);
+const dom = {
+  tabs: document.querySelectorAll('.tab-btn'),
+  contents: {
+    knowledge: $('tab-knowledge'),
+    chat: $('tab-chat'),
+    strategy: $('tab-strategy'),
+  },
+  moduleGrid: $('moduleGrid'),
+  chatMessages: $('chatMessages'),
+  chatInput: $('chatInput'),
+  chatSend: $('chatSend'),
+  strategyContent: $('strategyContent'),
+  searchInput: $('knowledgeSearch'),
+  apiModal: $('apiModal'),
+  apiKeyInput: $('apiKeyInput'),
+  modalSave: $('modalSave'),
+  modalCancel: $('modalCancel'),
+  settingsBtn: $('settingsBtn'),
+  searchBtn: $('searchBtn'),
+  chatInputBar: $('chatInputBar'),
+};
+
+/* ============================================================
+   Tab 切换
+============================================================ */
+dom.tabs.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    dom.tabs.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    Object.keys(dom.contents).forEach(k => {
+      dom.contents[k].classList.toggle('active', k === tab);
+    });
+    STATE.currentTab = tab;var ci=document.getElementById("chatInputBar");if(ci)ci.style.display=(tab==="chat")?"flex":"none";
+    if (dom.chatInputBar) dom.chatInputBar.style.display = (tab === 'chat') ? 'flex' : 'none';
+    if (tab === 'chat') scrollChatToBottom();
+  });
+});
+
+/* ============================================================
+   知识库渲染
+============================================================ */
+function renderKnowledge(filter = '') {
+  const f = filter.toLowerCase().trim();
+  dom.moduleGrid.innerHTML = '';
+
+  for (const [key, mod] of Object.entries(KNOWLEDGE_DATA)) {
+    // Filter
+    if (f && !mod.label.includes(f) && !mod.intro.toLowerCase().includes(f)
+        && !mod.sections.some(s => s.title.toLowerCase().includes(f)
+          || s.content.some(c => c.toLowerCase().includes(f)))) {
+      continue;
+    }
+
+    const card = document.createElement('div');
+    card.className = 'module-card';
+    card.innerHTML = `
+      <div class="module-card-header">
+        <span class="module-card-icon">${mod.icon}</span>
+        <span class="module-card-title">${mod.label}</span>
+      </div>
+      <div class="module-card-intro">${mod.intro}</div>
+      <div class="module-card-expand">展开 ▼</div>
+    `;
+
+    const sectionsContainer = document.createElement('div');
+    sectionsContainer.style.display = 'none';
+
+    mod.sections.forEach(sec => {
+      const box = document.createElement('div');
+      box.className = 'section-box';
+      const isOpen = STATE.expandedModules[`${key}_${sec.title}`];
+
+      let bodyHTML = sec.content.map(line => {
+        if (line.startsWith('⚠')) return `<span class="warning">${line}</span>`;
+        if (line === '') return '<br>';
+        return line;
+      }).join('\n');
+
+      // Normalize newlines for display
+      bodyHTML = bodyHTML.replace(/\n/g, '<br>');
+
+      box.innerHTML = `
+        <div class="section-header ${isOpen ? 'open' : ''}" data-key="${key}" data-sec="${sec.title}">
+          <span>${sec.title}</span>
+          <span class="arrow">▼</span>
+        </div>
+        <div class="section-body ${isOpen ? 'open' : ''}">${bodyHTML}</div>
+      `;
+
+      const header = box.querySelector('.section-header');
+      header.addEventListener('click', () => {
+        const body = box.querySelector('.section-body');
+        const isOpening = !body.classList.contains('open');
+        body.classList.toggle('open');
+        header.classList.toggle('open');
+        STATE.expandedModules[`${key}_${sec.title}`] = isOpening;
+      });
+
+      sectionsContainer.appendChild(box);
+    });
+
+    card.appendChild(sectionsContainer);
+
+    // Click card header to toggle sections
+    card.querySelector('.module-card-header').addEventListener('click', () => {
+      const isVisible = sectionsContainer.style.display !== 'none';
+      sectionsContainer.style.display = isVisible ? 'none' : 'block';
+      card.querySelector('.module-card-expand').textContent = isVisible ? '展开 ▼' : '收起 ▲';
+    });
+
+    card.querySelector('.module-card-expand').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isVisible = sectionsContainer.style.display !== 'none';
+      sectionsContainer.style.display = isVisible ? 'none' : 'block';
+      card.querySelector('.module-card-expand').textContent = isVisible ? '展开 ▼' : '收起 ▲';
+    });
+
+    dom.moduleGrid.appendChild(card);
+  }
+}
+
+/* ============================================================
+   搜索
+============================================================ */
+let searchTimer,photoData=null;const photoInput=document.getElementById("photoInput");if(photoInput)photoInput.addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{photoData=ev.target.result;addMessage("user","📷 [图片已就绪],请输入问题");dom.chatInput.value="";};r.readAsDataURL(f);});
+dom.searchInput.addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => renderKnowledge(dom.searchInput.value), 300);
+});
+dom.searchBtn.addEventListener('click', () => renderKnowledge(dom.searchInput.value));
+
+/* ============================================================
+   聊天 / DeepSeek API
+============================================================ */
+const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
+const SYSTEM_PROMPT = `你是公考花生十三备考助手。你必须严格按照花生十三的教学体系回答行测和申论问题。
+
+核心原则：
+1. 资料分析：用 ABRX 四要素体系 + 截位直除/415 份数/假设分配三大速算方法
+2. 数量关系：优先用赋特殊值、方程法、代入排除，推荐选做 5-7 道
+3. 言语理解：语境分析 + 中心句识别
+4. 判断推理：规律顺序法 + 要素提取法
+5. 申论：审题→找点→加工→书写四步法
+
+回答要求：
+- 题目讲解必须按：题型识别 → 思路 → 计算/分析 → 答案 → 易错点
+- 资料/数量题必须给出具体速算方法
+- 用清晰的分步结构，不要一次给太长的段落
+- 如果是图片题，引导用户描述题目内容
+- 语气专业但有温度`;
+
+function addMessage(role, text) {
+  STATE.messages.push({ role, text, time: Date.now() });
+  localStorage.setItem('huasheng_chat', JSON.stringify(STATE.messages));
+  renderMessages();
+}
+
+function renderMessages() {
+  dom.chatMessages.innerHTML = '';
+  STATE.messages.forEach(m => {
+    const div = document.createElement('div');
+    div.className = `msg ${m.role}`;
+    // Simple markdown-like rendering for AI messages
+    if (m.role === 'ai') {
+      let html = m.text
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/\n/g, '<br>')
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      div.innerHTML = html;
+    } else {
+      div.textContent = m.text;
+    }
+    const ts = document.createElement('div');
+    ts.className = 'timestamp';
+    ts.textContent = new Date(m.time).toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'});
+    div.appendChild(ts);
+    dom.chatMessages.appendChild(div);
+  });
+  scrollChatToBottom();
+}
+
+function scrollChatToBottom() {
+  setTimeout(() => {
+    dom.contents.chat.scrollTop = dom.contents.chat.scrollHeight;
+  }, 50);
+}
+
+async function sendMessage(text) {
+  if (!text.trim() || STATE.isProcessing) return;
+
+  // Check API key
+  if (!STATE.apiKey) {
+    openApiModal();
+    dom.chatInput.value = text; // Keep the input
+    return;
+  }
+
+  STATE.isProcessing = true;
+  dom.chatSend.disabled = true;
+
+  addMessage('user', text.trim());
+  dom.chatInput.value = '';
+  dom.chatInput.style.height = '40px';
+
+  // Show typing indicator
+  const typingDiv = document.createElement('div');
+  typingDiv.className = 'msg ai';
+  typingDiv.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+  dom.chatMessages.appendChild(typingDiv);
+  scrollChatToBottom();
+
+  try {
+    const msgs = STATE.messages.slice(-10).map(function(m) { if(m.role==="user" && photoData && (m.text.includes("图片") || m.text.includes("题目"))) { var v = { role: "user", content: [{type: "text", text: m.text}, {type: "image_url", image_url: {url: photoData}}] }; photoData = null; return v; } return { role: m.role === "ai" ? "assistant" : m.role, content: m.text }; }); const resp = await fetch(DEEPSEEK_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${STATE.apiKey}`,
+      },
+      body: JSON.stringify({
+        stream: false,
+        model: 'deepseek-chat',
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          ...STATE.messages.slice(-10).map(m => ({
+            role: m.role === 'ai' ? 'assistant' : m.role,
+            content: m.text,
+          }))
+        ],
+        temperature: 0.7,
+        max_tokens: 2000,
+        stream: false,
+      }),
+    });
+
+    // Remove typing indicator
+    typingDiv.remove();
+
+    if (!resp.ok) {
+      const err = await resp.text();
+      if (resp.status === 401) {
+        addMessage('system', 'API Key 无效，请重新设置。');
+        STATE.apiKey = '';
+        localStorage.removeItem('huasheng_api_key');
+      } else {
+        addMessage('system', `请求失败 (${resp.status})，请重试。`);
+      }
+    } else {
+      const data = await resp.json();
+      const reply = data.choices[0].message.content;
+      addMessage('ai', reply);
+    }
+  } catch (e) {
+    typingDiv.remove();
+    addMessage('system', '网络连接失败，请检查网络后重试。');
+  }
+
+  STATE.isProcessing = false;
+  dom.chatSend.disabled = false;
+}
+
+// Chat input auto-resize
+dom.chatInput.addEventListener('input', () => {
+  dom.chatInput.style.height = '40px';
+  dom.chatInput.style.height = Math.min(dom.chatInput.scrollHeight, 100) + 'px';
+  dom.chatSend.disabled = !dom.chatInput.value.trim();
+});
+
+dom.chatInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage(dom.chatInput.value);
+  }
+});
+dom.chatSend.addEventListener('click', () => sendMessage(dom.chatInput.value));
+
+/* ============================================================
+   API Key Modal
+============================================================ */
+function openApiModal() {
+  dom.apiKeyInput.value = STATE.apiKey;
+  dom.apiModal.classList.add('open');
+  dom.apiKeyInput.focus();
+}
+
+function closeApiModal() {
+  dom.apiModal.classList.remove('open');
+}
+
+dom.settingsBtn.addEventListener('click', openApiModal);
+
+dom.modalSave.addEventListener('click', () => {
+  const key = dom.apiKeyInput.value.trim();
+  if (key) {
+    STATE.apiKey = key;
+    localStorage.setItem('huasheng_api_key', key);
+  }
+  closeApiModal();
+});
+
+dom.modalCancel.addEventListener('click', closeApiModal);
+dom.apiModal.addEventListener('click', (e) => {
+  if (e.target === dom.apiModal) closeApiModal();
+});
+
+/* ============================================================
+   备考策略页
+============================================================ */
+function renderStrategy() {
+  const sections = [
+    { title: '📌 推荐做题顺序',
+      content: `常识判断（8 分钟）→ 资料分析（25 分钟）→ 判断推理（35 分钟）\n→ 言语理解（35 分钟）→ 数量关系（12 分钟）\n\n总计 115 分钟，留 5 分钟涂卡检查\n\n为什么先做常识？不会的快速过，进入考试状态\n资料分析头脑清醒时做，分值最高\n数量关系最后选做 5-7 道` },
+    { title: '📌 模块性价比',
+      content: `资料分析 > 判断推理 > 言语理解 > 数量关系 > 常识判断\n\n资料分析：1.15 分/题，提分最快\n判断推理：0.7 分/题，技巧性强\n言语理解：0.6 分/题，靠积累\n数量关系：1.0 分/题，选做\n常识判断：0.5 分/题，快速过` },
+    { title: '📌 涂卡策略',
+      content: `做完资料分析涂一次卡\n做完言语+判断涂第二次\n\n⚠ 千万不要全部最后涂！\n⚠ 每做完一篇资料直接涂答案，避免串行` },
+    { title: '📌 套题复盘方法',
+      content: `复盘比做题更重要！每套题复盘时间 ≥ 做题时间\n\n① 对答案：标记错题，不看解析自己再做一遍\n② 归因：知识点没掌握？计算错？审题错？时间不够？\n③ 知识补漏：错的题型找到对应知识点重新学\n④ 错题本：按模块记录错题，标注错误原因\n⑤ 总结规律：同类型错题有没有共同特征` },
+    { title: '📌 三阶段备考规划',
+      content: `【基础阶段 - 2-3 个月】\n听课（花生十三系统课）+ 做笔记\n分模块打基础，每听完一章做对应练习题\n重点：资料分析、判断推理\n\n【强化阶段 - 1-2 个月】\n刷题为主：每天行测 100 题 + 申论 1 道\n限时训练：模拟真实考试节奏\n错题归因 + 知识点补漏\n\n【冲刺阶段 - 1 个月】\n套题实战：隔天一套完整行测+申论\n时间分配：严格按考场时间分配\n全真模拟：调整生物钟和心态` },
+    { title: '📌 每日学习建议',
+      content: `在职备考（3-4 小时/天）：\n▶ 早起 30 分钟：刷 20 道资料分析\n▶ 午休 30 分钟：背成语/常识\n▶ 晚上 2-3 小时：系统学习+刷题\n\n全职备考（8-10 小时/天）：\n▶ 上午：行测模块学习+刷题\n▶ 下午：申论学习+写作\n▶ 晚上：复盘+错题+积累` },
+  ];
+
+  dom.strategyContent.innerHTML = '';
+  sections.forEach(s => {
+    const el = document.createElement('div');
+    el.className = 'strategy-section';
+    el.innerHTML = `<h3>${s.title}</h3><p>${s.content}</p>`;
+    dom.strategyContent.appendChild(el);
+  });
+}
+
+/* ============================================================
+   初始化
+============================================================ */
+function init() {
+  renderKnowledge();
+  renderStrategy();
+
+  // Restore chat messages
+  if (STATE.messages.length > 0) {
+    renderMessages();
+  }
+
+  // Hide input bar initially (only show on chat tab)
+  dom.chatInputBar.style.display = 'none';
+
+  // Update send button state
+  dom.chatSend.disabled = !dom.chatInput.value.trim();
+}
+
+init();
+</script>
+</body>
+</html>
+
+
