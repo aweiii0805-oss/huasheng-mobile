@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -285,6 +285,7 @@ a{color:var(--accent2);text-decoration:none}
 </div>
 
 <script src="knowledge-data.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 'use strict';
 
@@ -316,6 +317,7 @@ const dom = {
   chatSend: $('chatSend'),
   strategyContent: $('strategyContent'),
   searchInput: $('knowledgeSearch'),
+  photoPreview: $('photoPreview'),
   apiModal: $('apiModal'),
   apiKeyInput: $('apiKeyInput'),
   modalSave: $('modalSave'),
@@ -428,7 +430,8 @@ function renderKnowledge(filter = '') {
 /* ============================================================
    搜索
 ============================================================ */
-let searchTimer,photoData=null;const photoInput=document.getElementById("photoInput");if(photoInput)photoInput.addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=ev=>{photoData=ev.target.result;addMessage("user","📷 [图片已就绪],请输入问题");dom.chatInput.value="";};r.readAsDataURL(f);});
+let ocrText=null;const photoInput=document.getElementById("photoInput");if(photoInput)photoInput.addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;const idx=addMessage("user","📷 正在识别图片中的文字...");dom.chatInput.value="";const r=new FileReader();r.onload=async ev=>{const img=new Image();img.onload=async()=>{const c=document.createElement('canvas');const m=2048;let w=img.width,h=img.height;if(w>m||h>m){if(w>h){w=m;h=img.height*m/img.width}else{h=m;w=img.width*m/img.height}}c.width=w;c.height=h;const ctx=c.getContext('2d');ctx.drawImage(img,0,0,w,h);try{if(typeof Tesseract==="undefined"){document.querySelectorAll(".msg")[idx].textContent="📷 OCR 库加载中，请稍后再试或手动输入";return}const{data:{text}}=await Tesseract.recognize(c.toDataURL('image/jpeg',0.9),'chi_sim',{logger:m=>{}});const cleaned=text.trim().replace(/\s+/g,' ');if(cleaned){ocrText=cleaned;document.querySelectorAll(".msg")[idx].textContent="📷 已识别："+cleaned.substring(0,120)+(cleaned.length>120?"...":"");dom.chatInput.value="请根据以上题目帮我解答";dom.chatInput.dispatchEvent(new Event('input'))}else{document.querySelectorAll(".msg")[idx].textContent="📷 未识别到文字，请手动输入题目";ocrText=""}}catch(err){document.querySelectorAll(".msg")[idx].textContent="📷 识别失败，请手动输入题目（"+err.message.substring(0,40)+"）";ocrText=""}};img.src=ev.target.result};r.readAsDataURL(f);});
+let searchTimer;
 dom.searchInput.addEventListener('input', () => {
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => renderKnowledge(dom.searchInput.value), 300);
@@ -459,6 +462,7 @@ function addMessage(role, text) {
   STATE.messages.push({ role, text, time: Date.now() });
   localStorage.setItem('huasheng_chat', JSON.stringify(STATE.messages));
   renderMessages();
+  return STATE.messages.length - 1;
 }
 
 function renderMessages() {
@@ -517,24 +521,20 @@ async function sendMessage(text) {
   scrollChatToBottom();
 
   try {
-    const msgs = STATE.messages.slice(-10).map(function(m) { if(m.role==="user" && photoData && (m.text.includes("图片") || m.text.includes("题目"))) { var v = { role: "user", content: [{type: "text", text: m.text}, {type: "image_url", image_url: {url: photoData}}] }; photoData = null; return v; } return { role: m.role === "ai" ? "assistant" : m.role, content: m.text }; }); const resp = await fetch(DEEPSEEK_URL, {
+    const msgs = STATE.messages.slice(-10).map(function(m,i,arr){let content=m.text;if(m.role==="user"&&ocrText&&i===arr.length-1){content=content+"\n\n[图片识别结果]："+ocrText;ocrText=null}return{role:m.role==="ai"?"assistant":m.role,content}}); const resp = await fetch(DEEPSEEK_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${STATE.apiKey}`,
       },
       body: JSON.stringify({
-        stream: false,
-        model: 'deepseek-chat',
+        model: 'deepseek-v4-pro',
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
-          ...STATE.messages.slice(-10).map(m => ({
-            role: m.role === 'ai' ? 'assistant' : m.role,
-            content: m.text,
-          }))
+          ...msgs
         ],
         temperature: 0.7,
-        max_tokens: 2000,
+        max_tokens: 4000,
         stream: false,
       }),
     });
@@ -542,24 +542,24 @@ async function sendMessage(text) {
     // Remove typing indicator
     typingDiv.remove();
 
-    if (!resp.ok) {
-      const err = await resp.text();
-      if (resp.status === 401) {
-        addMessage('system', 'API Key 无效，请重新设置。');
-        STATE.apiKey = '';
-        localStorage.removeItem('huasheng_api_key');
-      } else {
-        addMessage('system', `请求失败 (${resp.status})，请重试。`);
-      }
-    } else {
-      const data = await resp.json();
-      const reply = data.choices[0].message.content;
-      addMessage('ai', reply);
-    }
-  } catch (e) {
-    typingDiv.remove();
-    addMessage('system', '网络连接失败，请检查网络后重试。');
-  }
+   if (!resp.ok) {
+     const err = await resp.text();
+     if (resp.status === 401) {
+       addMessage('system', 'API Key 无效，请重新设置。');
+       STATE.apiKey = '';
+       localStorage.removeItem('huasheng_api_key');
+     } else {
+        addMessage('system', `请求失败 (${resp.status})：${err.slice(0,200)}`);
+     }
+   } else {
+     const data = await resp.json();
+     const reply = data.choices[0].message.content;
+     addMessage('ai', reply);
+   }
+ } catch (e) {
+   typingDiv.remove();
+    addMessage('system', `网络连接失败：${e.message}`);
+ }
 
   STATE.isProcessing = false;
   dom.chatSend.disabled = false;
