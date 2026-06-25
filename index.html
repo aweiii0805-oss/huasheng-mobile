@@ -474,6 +474,7 @@ function renderMessages() {
     if (m.role === 'ai') {
       let html = m.text
         .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/```[\s\S]*?```/g, function(m) { return '<pre>' + m.slice(3,-3).replace(/\n/g,'<br>') + '</pre>' })
         .replace(/\n/g, '<br>')
         .replace(/`([^`]+)`/g, '<code>$1</code>')
         .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
@@ -536,6 +537,7 @@ async function sendMessage(text) {
         temperature: 0.7,
         max_tokens: 4000,
         stream: false,
+        thinking: {"type": "disabled"},
       }),
     });
 
